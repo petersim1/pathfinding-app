@@ -8,7 +8,4 @@ commitlint.config.js
 next.config.js
 postcss.config.js
 tailwind.config.js
-cypress.config.ts
-*.cy.ts
-cypress/*
-contracts/abis/*
+tsconfig.json
