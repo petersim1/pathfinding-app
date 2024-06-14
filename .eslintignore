@@ -1,0 +1,14 @@
+dist
+*.d.ts
+node_modules
+babel.config.js
+graphqlEnums.js
+.eslintrc.js
+commitlint.config.js
+next.config.js
+postcss.config.js
+tailwind.config.js
+cypress.config.ts
+*.cy.ts
+cypress/*
+contracts/abis/*
