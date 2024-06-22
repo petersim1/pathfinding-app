@@ -20,7 +20,7 @@ const Visual = (): JSX.Element => {
   const [percent, setPercent] = useState(0.5);
   const [isError, setIsError] = useState("");
   const [benchmarked, setBenchmarked] = useState<
-    Record<string, { nIter: number; pLen: number }>
+    Record<string, { nIter: number; nScan: number; pLen: number }>
   >({});
   const shouldRun = useRef<boolean>(false);
   const delay = useRef<number>(100);
