@@ -5,12 +5,13 @@ import Graph from "@/lib/utils/Graph";
 
 import { GraphContextI, GraphFieldsI } from "@/lib/types";
 import { MethodEnum, HeuristicEnum } from "@/lib/types/enum";
+import { DEFAULT_DIMENSION } from "@/lib/constants";
 
 const INITIAL_STATE: GraphFieldsI = {
   method: MethodEnum.DFS,
   heuristic: HeuristicEnum.Manhattan,
   diagonal: false,
-  dimension: [10, 10],
+  dimension: DEFAULT_DIMENSION,
 };
 
 export const GraphContext = createContext<GraphContextI>({
@@ -28,7 +29,7 @@ const GraphProvider = ({
 }: {
   children: React.ReactNode;
 }): JSX.Element => {
-  const graph = useRef(new Graph(10, 10));
+  const graph = useRef(new Graph(DEFAULT_DIMENSION[0], DEFAULT_DIMENSION[1]));
   const [fields, setFields] = useState({ ...INITIAL_STATE });
   const [resetViz, setResetViz] = useState(false);
 

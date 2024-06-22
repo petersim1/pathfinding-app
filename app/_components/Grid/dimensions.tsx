@@ -1,20 +1,12 @@
 "use client";
+import { useState } from "react";
 
 import { cn } from "@/lib/helpers";
 import { useGraph } from "@/lib/hooks";
 import Graph from "@/lib/utils/Graph";
-// import Graph from "@/lib/utils/Graph";
-import { useState } from "react";
+import { MAX_DIM, MIN_DIM, MAX_RATIO } from "@/lib/constants";
 
-const MAX_DIM = 50;
-const MIN_DIM = 4;
-const MAX_RATIO = 2;
-
-const Dimensions = ({
-  setShouldReset,
-}: {
-  setShouldReset: React.Dispatch<React.SetStateAction<boolean>>;
-}): JSX.Element => {
+const Dimensions = (): JSX.Element => {
   const { graph, fields, fieldsSetter } = useGraph();
   const [isError, setIsError] = useState("");
   const [dimensions, setDimensions] = useState([...fields.dimension]);
@@ -50,7 +42,6 @@ const Dimensions = ({
       // pull dimensions from state, not fields, as fields won't be updated
       // yet when this is called.
       graph.current = new Graph(rows, cols, graph.current.allowDiagonal);
-      setShouldReset(true);
     }
   };
 

@@ -1,6 +1,7 @@
 import { FinderInputOptions } from "./types";
-import { MethodEnum } from "./types/enum";
-import { astar, bfs, dfs, dfsHeuristic, gbfs } from "./utils/finders";
+import { HeuristicEnum, MethodEnum } from "./types/enum";
+import Graph from "./utils/Graph";
+import * as Search from "./utils/Search";
 
 export const cn = (...args: unknown[]): string => {
   return args
@@ -41,12 +42,12 @@ export const nestedArrayContains = (
   return false;
 };
 
-const ALGO_MAPPER = {
-  [MethodEnum.BFS]: bfs,
-  [MethodEnum.DFS]: dfs,
-  [MethodEnum.ASTAR]: astar,
-  [MethodEnum.DFSH]: dfsHeuristic,
-  [MethodEnum.GBFS]: gbfs,
+export const ALGO_MAPPER = {
+  [MethodEnum.BFS]: Search.bfs,
+  [MethodEnum.DFS]: Search.dfs,
+  [MethodEnum.ASTAR]: Search.astar,
+  [MethodEnum.DFSH]: Search.dfsHeuristic,
+  [MethodEnum.GBFS]: Search.gbfs,
 };
 
 export const getAlgorithmFunction = (
@@ -55,4 +56,40 @@ export const getAlgorithmFunction = (
   const methodEnumKey = method as keyof typeof MethodEnum;
   const algoMapperKey = MethodEnum[methodEnumKey] as keyof typeof ALGO_MAPPER;
   return ALGO_MAPPER[algoMapperKey];
+};
+
+export const benchmark = (
+  start: [number, number],
+  end: [number, number],
+  graph: Graph,
+  heuristic: HeuristicEnum,
+): Record<string, { nIter: number; pLen: number }> => {
+  if (!graph) return {};
+  const results: Record<string, { nIter: number; pLen: number }> = {};
+  Object.entries(ALGO_MAPPER).forEach(([k, fct]) => {
+    const finder = fct(start, end, graph, heuristic);
+    let res = finder.next();
+    let nIter = 0;
+    let pLen = 0;
+    while (!res.done) {
+      const { status, data } = res.value;
+      switch (status) {
+        case "search":
+          nIter++;
+          break;
+        case "path":
+          if (data) {
+            pLen = data.length;
+          }
+          break;
+        case "error":
+          nIter = 0;
+          pLen = 0;
+          break;
+      }
+      res = finder.next();
+    }
+    results[k] = { nIter, pLen };
+  });
+  return results;
 };

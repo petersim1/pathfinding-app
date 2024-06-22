@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { select } from "d3";
 
-import { cn, getAlgorithmFunction } from "@/lib/helpers";
+import { cn, getAlgorithmFunction, benchmark } from "@/lib/helpers";
 import { useGraph } from "@/lib/hooks";
 import { randomGrid } from "@/lib/utils/grid_generator";
 import { createMainGrid, addSearchNode, addSearchPath } from "@/lib/plotter";
 import Dimensions from "./dimensions";
+import Benchmark from "./benchmark";
 
 const Visual = (): JSX.Element => {
   const { graph, fields } = useGraph();
@@ -16,57 +17,53 @@ const Visual = (): JSX.Element => {
     end: [number, number];
   }>({ start: [0, 0], end: [0, 0] });
   const [percent, setPercent] = useState(0.5);
-  const [shouldReset, setShouldReset] = useState(false);
   const [isError, setIsError] = useState("");
+  const [benchmarked, setBenchmarked] = useState<
+    Record<string, { nIter: number; pLen: number }>
+  >({});
   const shouldRun = useRef<boolean>(false);
   const delay = useRef<number>(100);
 
   const ref = useRef(null);
 
   useEffect(() => {
-    // On initial mount, grid won't be initialized.
-    // initialize it, and display an empty grid.
     if (!graph) return;
+    // if the provider tells us to reset the grid, we will.
+    // this occurs when dimensions change.
+    shouldRun.current = false;
     const svg = select(ref.current);
     svg.selectAll("*").remove();
-
-    graph.current.initializeGrid();
-    createMainGrid(svg, graph.current);
     setGrid({
       start: [Math.round(graph.current.rows / 2), 0],
       end: [Math.round(graph.current.rows / 2), graph.current.cols - 1],
     });
+
+    graph.current.initializeGrid();
+    createMainGrid(svg, graph.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fields.dimension]);
 
   useEffect(() => {
     if (!graph) return;
-    // if the provider tells us to reset the grid, we will.
-    // this occurs when dimensions change.
-    if (shouldReset) {
-      shouldRun.current = false;
-      const svg = select(ref.current);
-      svg.selectAll("*").remove();
-      setGrid({
-        start: [Math.round(graph.current.rows / 2), 0],
-        end: [Math.round(graph.current.rows / 2), graph.current.cols - 1],
-      });
-
-      graph.current.initializeGrid();
-      createMainGrid(svg, graph.current);
-      setShouldReset(false);
-    }
+    setBenchmarked(
+      benchmark(grid.start, grid.end, graph.current, fields.heuristic),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldReset]);
+  }, [grid, fields.diagonal, fields.heuristic, fields.dimension]);
 
   const clear = (): void => {
     if (!graph) return;
     setIsError("");
     shouldRun.current = false;
     graph.current.initializeGrid();
+    const s: [number, number] = [Math.round(graph.current.rows / 2), 0];
+    const e: [number, number] = [
+      Math.round(graph.current.rows / 2),
+      graph.current.cols - 1,
+    ];
     setGrid({
-      start: [Math.round(graph.current.rows / 2), 0],
-      end: [Math.round(graph.current.rows / 2), graph.current.cols - 1],
+      start: s,
+      end: e,
     });
 
     const svg = select(ref.current);
@@ -146,7 +143,7 @@ const Visual = (): JSX.Element => {
 
   return (
     <div className="w-full text-left">
-      <Dimensions setShouldReset={setShouldReset} />
+      <Dimensions />
       <div className="flex flex-col justify-start items-center w-full gap-2 text-center">
         <div className="flex flex-row gap-4 justify-center">
           <button
@@ -185,7 +182,8 @@ const Visual = (): JSX.Element => {
             {isError}
           </span>
         )}
-        <div ref={ref} className="w-[500px] h-[550px]" />
+        <Benchmark benchmark={benchmarked} />
+        <div ref={ref} className="w-[500px] h-[550px]" id="data-viz" />
         <div className="text-center">
           <div className="flex flex-row justify-center gap-4 mb-4">
             <button

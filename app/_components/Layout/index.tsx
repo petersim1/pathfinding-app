@@ -23,5 +23,5 @@ export const Nav = ({
 }: {
   children: React.ReactNode;
 }): JSX.Element => {
-  return <nav className="h-full flex flex-col p-2">{children}</nav>;
+  return <nav className="h-full flex flex-col">{children}</nav>;
 };
