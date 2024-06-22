@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import Graph from "./utils/Graph";
+import { YieldEnum } from "./types/enum";
 
 const plottingProps = {
   width: 1000,
@@ -148,6 +149,7 @@ export const addSearchNode = (
   holder: d3.Selection<null, unknown, null, undefined>,
   graph: Graph,
   position: [number, number],
+  searchType: YieldEnum.SEARCH | YieldEnum.SCAN,
 ): void => {
   const CELL_SIZE = Math.min(
     plottingProps.height / graph.rows,
@@ -172,7 +174,7 @@ export const addSearchNode = (
       position[0] * CELL_SIZE + CELL_SIZE / 2 + plottingProps.legend + OFFSET_Y,
     )
     .attr("r", CELL_SIZE / 2)
-    .attr("fill", "blue")
+    .attr("fill", searchType == YieldEnum.SEARCH ? "blue" : "gray")
     .style("opacity", 0)
     .transition()
     .duration(100)

@@ -1,5 +1,5 @@
 import { FinderInputOptions } from "./types";
-import { HeuristicEnum, MethodEnum } from "./types/enum";
+import { HeuristicEnum, MethodEnum, YieldEnum } from "./types/enum";
 import Graph from "./utils/Graph";
 import * as Search from "./utils/Search";
 
@@ -48,6 +48,7 @@ export const ALGO_MAPPER = {
   [MethodEnum.ASTAR]: Search.astar,
   [MethodEnum.DFSH]: Search.dfsHeuristic,
   [MethodEnum.GBFS]: Search.gbfs,
+  [MethodEnum.JPS]: Search.jps,
 };
 
 export const getAlgorithmFunction = (
@@ -63,33 +64,53 @@ export const benchmark = (
   end: [number, number],
   graph: Graph,
   heuristic: HeuristicEnum,
-): Record<string, { nIter: number; pLen: number }> => {
+): Record<string, { nIter: number; nScan: number; pLen: number }> => {
   if (!graph) return {};
-  const results: Record<string, { nIter: number; pLen: number }> = {};
+  const results: Record<
+    string,
+    { nIter: number; nScan: number; pLen: number }
+  > = {};
   Object.entries(ALGO_MAPPER).forEach(([k, fct]) => {
     const finder = fct(start, end, graph, heuristic);
     let res = finder.next();
     let nIter = 0;
+    let nScan = 0;
     let pLen = 0;
     while (!res.done) {
       const { status, data } = res.value;
       switch (status) {
-        case "search":
+        case YieldEnum.SEARCH:
           nIter++;
           break;
-        case "path":
+        case YieldEnum.SCAN:
+          nScan++;
+          break;
+        case YieldEnum.PATH:
           if (data) {
-            pLen = data.length;
+            let interP = 0;
+            // JPS prevents us from using length directly.
+            for (let i = 1; i < data.length; i++) {
+              const prevD: [number, number] = (data as [number, number][])[
+                i - 1
+              ];
+              const curD: [number, number] = (data as [number, number][])[i];
+              interP += Math.max(
+                Math.abs(prevD[0] - curD[0]),
+                Math.abs(prevD[1] - curD[1]),
+              );
+            }
+            pLen = interP;
           }
           break;
-        case "error":
+        case YieldEnum.ERROR:
           nIter = 0;
+          nScan = 0;
           pLen = 0;
           break;
       }
       res = finder.next();
     }
-    results[k] = { nIter, pLen };
+    results[k] = { nIter, nScan, pLen };
   });
   return results;
 };

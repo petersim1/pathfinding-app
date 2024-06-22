@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Graph from "../utils/Graph";
 
-import { MethodEnum, HeuristicEnum } from "./enum";
+import { MethodEnum, HeuristicEnum, YieldEnum } from "./enum";
 
 export type GraphFieldsI = {
   method: MethodEnum;
@@ -21,7 +21,7 @@ export type GraphContextI = {
 };
 
 export type GeneratorFinderI = Generator<{
-  status: string;
+  status: YieldEnum;
   data: [number, number] | [number, number][] | null;
 }>;
 

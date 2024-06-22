@@ -9,6 +9,7 @@ import { randomGrid } from "@/lib/utils/grid_generator";
 import { createMainGrid, addSearchNode, addSearchPath } from "@/lib/plotter";
 import Dimensions from "./dimensions";
 import Benchmark from "./benchmark";
+import { YieldEnum } from "@/lib/types/enum";
 
 const Visual = (): JSX.Element => {
   const { graph, fields } = useGraph();
@@ -101,21 +102,31 @@ const Visual = (): JSX.Element => {
       const { status, data } = res.value;
       await new Promise((resolve) => setTimeout(resolve, delay.current));
       switch (status) {
-        case "search":
+        case YieldEnum.SEARCH:
           if (JSON.stringify(data) !== JSON.stringify(grid.start)) {
             // it's likely that within the loop (due to the delay), that the shouldRun
             // was adjusted. We don't still want to fill the canvas, so add another check.
             if (shouldRun.current) {
-              addSearchNode(svg, graph.current, data as [number, number]);
+              addSearchNode(
+                svg,
+                graph.current,
+                data as [number, number],
+                status,
+              );
             }
           }
           break;
-        case "path":
+        case YieldEnum.SCAN:
+          if (shouldRun.current) {
+            addSearchNode(svg, graph.current, data as [number, number], status);
+          }
+          break;
+        case YieldEnum.PATH:
           if (shouldRun.current) {
             addSearchPath(svg, graph.current, data as [number, number][]);
           }
           break;
-        case "error":
+        case YieldEnum.ERROR:
           if (shouldRun.current) {
             setIsError("no valid path!");
           }

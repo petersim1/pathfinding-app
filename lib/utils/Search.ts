@@ -1,5 +1,5 @@
 import { GeneratorFinderI } from "../types";
-import { HeuristicEnum } from "../types/enum";
+import { HeuristicEnum, YieldEnum } from "../types/enum";
 import Graph from "./Graph";
 import PriorityQueue from "./Queue";
 
@@ -41,7 +41,7 @@ export function* bfs(
 
   while (queue.length) {
     const curNode = queue.shift();
-    yield { status: "search", data: curNode! };
+    yield { status: YieldEnum.SEARCH, data: curNode! };
     if (JSON.stringify(curNode) == JSON.stringify(target)) {
       isValidPath = true;
       break;
@@ -58,9 +58,9 @@ export function* bfs(
 
   if (isValidPath) {
     const path = recreatePathFromParents(target, parents);
-    yield { status: "path", data: path };
+    yield { status: YieldEnum.PATH, data: path };
   } else {
-    yield { status: "error", data: null };
+    yield { status: YieldEnum.ERROR, data: null };
   }
 }
 
@@ -80,7 +80,7 @@ export function* dfs(
 
   while (stack.length) {
     const curNode = stack[stack.length - 1];
-    yield { status: "search", data: curNode };
+    yield { status: YieldEnum.SEARCH, data: curNode };
 
     if (JSON.stringify(curNode) == JSON.stringify(target)) {
       isValidPath = true;
@@ -103,9 +103,9 @@ export function* dfs(
 
   if (isValidPath) {
     const path = recreatePathFromStack(stack);
-    yield { status: "path", data: path };
+    yield { status: YieldEnum.PATH, data: path };
   } else {
-    yield { status: "error", data: null };
+    yield { status: YieldEnum.ERROR, data: null };
   }
 }
 
@@ -128,7 +128,7 @@ export function* dfsHeuristic(
 
   while (stack.length) {
     const curNode = stack[stack.length - 1];
-    yield { status: "search", data: curNode };
+    yield { status: YieldEnum.SEARCH, data: curNode };
 
     if (JSON.stringify(curNode) == JSON.stringify(target)) {
       isValidPath = true;
@@ -166,9 +166,9 @@ export function* dfsHeuristic(
 
   if (isValidPath) {
     const path = recreatePathFromStack(stack);
-    yield { status: "path", data: path };
+    yield { status: YieldEnum.PATH, data: path };
   } else {
-    yield { status: "error", data: null };
+    yield { status: YieldEnum.ERROR, data: null };
   }
 }
 
@@ -192,7 +192,7 @@ export function* gbfs(
 
   while (!queue.isEmpty()) {
     const { element: curNode } = queue.dequeue();
-    yield { status: "search", data: curNode! };
+    yield { status: YieldEnum.SEARCH, data: curNode! };
     if (JSON.stringify(curNode) == JSON.stringify(target)) {
       isValidPath = true;
       break;
@@ -210,9 +210,9 @@ export function* gbfs(
 
   if (isValidPath) {
     const path = recreatePathFromParents(target, parents);
-    yield { status: "path", data: path };
+    yield { status: YieldEnum.PATH, data: path };
   } else {
-    yield { status: "error", data: null };
+    yield { status: YieldEnum.ERROR, data: null };
   }
 }
 
@@ -237,7 +237,7 @@ export function* astar(
 
   while (!queue.isEmpty()) {
     const { element: curNode } = queue.dequeue();
-    yield { status: "search", data: curNode! };
+    yield { status: YieldEnum.SEARCH, data: curNode! };
     if (JSON.stringify(curNode) == JSON.stringify(target)) {
       isValidPath = true;
       break;
@@ -264,8 +264,110 @@ export function* astar(
 
   if (isValidPath) {
     const path = recreatePathFromParents(target, parents);
-    yield { status: "path", data: path };
+    yield { status: YieldEnum.PATH, data: path };
   } else {
-    yield { status: "error", data: null };
+    yield { status: YieldEnum.ERROR, data: null };
+  }
+}
+
+export function* jps(
+  start: [number, number],
+  target: [number, number],
+  graph: Graph,
+  heuristic: HeuristicEnum,
+): GeneratorFinderI {
+  const canEnter = (pos: [number, number]): boolean => {
+    return graph.isInGrid(pos) && !graph.isBlocked(pos);
+  };
+
+  const jump = (
+    nodeFrom: [number, number],
+    node: [number, number],
+    scanned: [number, number][] = [],
+  ): [[number, number] | null, [number, number][]] => {
+    const [r, c] = node;
+    const [dr, dc] = [r - nodeFrom[0], c - nodeFrom[1]];
+
+    if (!canEnter(node)) {
+      return [null, scanned];
+    }
+
+    if (JSON.stringify(node) === JSON.stringify(target)) {
+      return [node, scanned];
+    }
+
+    if (dr !== 0) {
+      if (
+        (canEnter([r, c - 1]) && !canEnter([r - dr, c - 1])) ||
+        (canEnter([r, c + 1]) && !canEnter([r - dr, c + 1]))
+      ) {
+        return [node, scanned];
+      }
+      const [vert0, vert0s] = jump([r, c + 1], node, scanned);
+      const [vert1, vert1s] = jump([r, c - 1], node, scanned);
+      if (vert0 !== null || vert1 !== null) {
+        return [node, [...new Set([...vert1s, ...vert0s])]];
+      }
+    }
+
+    if (dc !== 0) {
+      if (
+        (canEnter([r - 1, c]) && !canEnter([r - 1, c - dc])) ||
+        (canEnter([r + 1, c]) && !canEnter([r + 1, c - dc]))
+      ) {
+        return [node, scanned];
+      }
+    }
+
+    return jump(node, [r + dr, c + dc], [...scanned, node]);
+  };
+
+  const openList = new PriorityQueue();
+  openList.enqueue(start, 0);
+  const parents: Record<string, [number, number] | null> = {
+    [JSON.stringify(start)]: null,
+  };
+  const gScore: Record<string, number> = {
+    [JSON.stringify(start)]: 0,
+  };
+
+  let isValidPath = false;
+
+  while (!openList.isEmpty()) {
+    const current = openList.dequeue().element;
+    yield { status: YieldEnum.SEARCH, data: current };
+
+    if (JSON.stringify(current) === JSON.stringify(target)) {
+      isValidPath = true;
+      break;
+    }
+
+    const tentativeGScore = gScore[JSON.stringify(current)] + 1;
+
+    for (const neighbor of graph.getNeighbors(current)) {
+      const [jp, scanned] = jump(current, neighbor);
+      for (const s of scanned) {
+        yield { status: YieldEnum.SCAN, data: s };
+      }
+      if (jp === null) {
+        continue;
+      }
+      if (
+        !(JSON.stringify(jp) in gScore) ||
+        tentativeGScore < gScore[JSON.stringify(jp)]
+      ) {
+        parents[JSON.stringify(jp)] = current;
+        gScore[JSON.stringify(jp)] = tentativeGScore;
+        const fScore = tentativeGScore + Graph.distance(jp, target, heuristic);
+        openList.enqueue(jp, fScore);
+      }
+    }
+  }
+
+  if (isValidPath) {
+    const path = recreatePathFromParents(target, parents);
+    yield { status: YieldEnum.PATH, data: path };
+  } else {
+    yield { status: YieldEnum.ERROR, data: null };
   }
 }

@@ -1,7 +1,7 @@
 const Benchmark = ({
   benchmark,
 }: {
-  benchmark: Record<string, { nIter: number; pLen: number }>;
+  benchmark: Record<string, { nIter: number; nScan: number; pLen: number }>;
 }): JSX.Element => {
   return (
     <div className="absolute left-0 top-0">
@@ -12,6 +12,9 @@ const Benchmark = ({
           <ul className="text-xs list-disc *:ml-3">
             <li>
               Nodes Searched: <span className="font-bold">{d.nIter}</span>
+            </li>
+            <li>
+              Nodes Scanned: <span className="font-bold">{d.nScan}</span>
             </li>
             <li>
               Path Length: <span className="font-bold">{d.pLen}</span>
