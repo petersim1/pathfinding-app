@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { select } from "d3";
 
 import { cn, getAlgorithmFunction, benchmark } from "@/lib/helpers";
@@ -34,23 +34,42 @@ const Visual = (): JSX.Element => {
     shouldRun.current = false;
     const svg = select(ref.current);
     svg.selectAll("*").remove();
+
+    const start: [number, number] = [Math.round(graph.current.rows / 2), 0];
+    const end: [number, number] = [
+      Math.round(graph.current.rows / 2),
+      graph.current.cols - 1,
+    ];
     setGrid({
-      start: [Math.round(graph.current.rows / 2), 0],
-      end: [Math.round(graph.current.rows / 2), graph.current.cols - 1],
+      start,
+      end,
     });
 
     graph.current.initializeGrid();
-    createMainGrid(svg, graph.current);
+    createMainGrid(svg, graph, start, end, setGrid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields.dimension]);
 
   useEffect(() => {
     if (!graph) return;
-    setBenchmarked(
-      benchmark(grid.start, grid.end, graph.current, fields.heuristic),
-    );
+    if (
+      !graph.current.isBlocked(grid.start) &&
+      !graph.current.isBlocked(grid.end)
+    ) {
+      setBenchmarked(
+        benchmark(grid.start, grid.end, graph.current, fields.heuristic),
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, fields.diagonal, fields.heuristic, fields.dimension]);
+
+  const isValid = useMemo(() => {
+    if (!graph?.current || graph.current.grid.length === 0) return true;
+    return (
+      !graph.current.isBlocked(grid.start) && !graph.current.isBlocked(grid.end)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grid]);
 
   const clear = (): void => {
     if (!graph) return;
@@ -69,7 +88,7 @@ const Visual = (): JSX.Element => {
 
     const svg = select(ref.current);
     svg.selectAll("*").remove();
-    createMainGrid(svg, graph.current);
+    createMainGrid(svg, graph, s, e, setGrid);
   };
 
   const randomize = (): void => {
@@ -83,7 +102,7 @@ const Visual = (): JSX.Element => {
     const [s, e] = randomGrid(graph.current, percent);
     setGrid((prev) => ({ ...prev, start: s, end: e }));
 
-    createMainGrid(svg, graph.current, s, e);
+    createMainGrid(svg, graph, s, e, setGrid);
   };
 
   const start = async (): Promise<void> => {
@@ -103,7 +122,10 @@ const Visual = (): JSX.Element => {
       await new Promise((resolve) => setTimeout(resolve, delay.current));
       switch (status) {
         case YieldEnum.SEARCH:
-          if (JSON.stringify(data) !== JSON.stringify(grid.start)) {
+          if (
+            JSON.stringify(data) !== JSON.stringify(grid.start) &&
+            JSON.stringify(data) !== JSON.stringify(grid.end)
+          ) {
             // it's likely that within the loop (due to the delay), that the shouldRun
             // was adjusted. We don't still want to fill the canvas, so add another check.
             if (shouldRun.current) {
@@ -188,9 +210,14 @@ const Visual = (): JSX.Element => {
         </label>
       </div>
       <div className="flex flex-col justify-start items-center w-full gap-2 relative">
-        {isError && (
+        {isError && isValid && (
           <span className="text-sm text-red-400 absolute top-0 left-1/2 -translate-x-1/2">
             {isError}
+          </span>
+        )}
+        {!isValid && (
+          <span className="text-sm text-red-400 absolute top-0 left-1/2 -translate-x-1/2">
+            positions cannot be blocked
           </span>
         )}
         <Benchmark benchmark={benchmarked} />
@@ -201,8 +228,10 @@ const Visual = (): JSX.Element => {
               onClick={start}
               className={cn(
                 "border border-white rounded-md px-2 py-1 transition-all",
-                "hover:opacity-85 hover:scale-[99%]",
+                isValid && "hover:opacity-85 hover:scale-[99%]",
+                !isValid && "opacity-75",
               )}
+              disabled={!isValid}
             >
               Start Search
             </button>
@@ -210,8 +239,10 @@ const Visual = (): JSX.Element => {
               onClick={stop}
               className={cn(
                 "border border-white rounded-md px-2 py-1 transition-all",
-                "hover:opacity-85 hover:scale-[99%]",
+                isValid && "hover:opacity-85 hover:scale-[99%]",
+                !isValid && "opacity-75",
               )}
+              disabled={!isValid}
             >
               Stop Search
             </button>
@@ -219,8 +250,10 @@ const Visual = (): JSX.Element => {
               onClick={clearSearch}
               className={cn(
                 "border border-white rounded-md px-2 py-1 transition-all",
-                "hover:opacity-85 hover:scale-[99%]",
+                isValid && "hover:opacity-85 hover:scale-[99%]",
+                !isValid && "opacity-75",
               )}
+              disabled={!isValid}
             >
               Clear Search
             </button>

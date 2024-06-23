@@ -71,7 +71,7 @@ class Graph {
 
   isBlocked(node: [number, number]): boolean {
     const [r, c] = node;
-    if (!this.isInGrid(node)) throw new Error("Node is not within grid");
+    if (!this.isInGrid(node)) return true;
     return this._grid[r][c] === 0;
   }
 
